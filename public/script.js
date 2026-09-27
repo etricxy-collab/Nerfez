@@ -24,13 +24,6 @@ let name = "anonyme";
 let pseudoJoueur = "Couscous";
 let pseudoJoueurRecu = "Tajine";
 let envoi_boolean = false;
-let reponseLeo = [];
-let reponseAdrien = [];
-let reponseRobert = [];
-let reponseJeanPaul = [];
-let reponseMaurice = [];
-let playersNameRecu = [];
-let playersPointsRecu = [];
 let pseudoQuiNousDM = "";
 
 document.getElementById("lancer_jeu").addEventListener("click", function (e) {
@@ -77,45 +70,46 @@ reponse_finale.addEventListener("click", function (e) {
   }
 });
 
+// ========== FORMULAIRE DE RÉPONSE ==========
+submission.addEventListener("submit", function (evt) {
+  evt.preventDefault();
+  const reponse = evt.target["reponse"].value;
+  if (reponse) {
+    socket.emit("user_message", pseudoJoueur, reponse);
+    socket.emit("send_response", reponse); // ← seulement la réponse
+    evt.target["reponse"].value = "";
+  }
+});
+
+// ========== BOUTON ENVOYER ==========
 img_send.addEventListener("click", function (e) {
   e.preventDefault();
   const reponse = document.getElementById("reponse").value;
   if (reponse) {
     socket.emit("user_message", pseudoJoueur, reponse);
-    socket.emit("send_response", name, reponse);
+    socket.emit("send_response", reponse); // ← seulement la réponse
     document.getElementById("reponse").value = "";
   }
 });
 
-// ========== CORRECTION ICI ==========
+// ========== CONNEXION (ordre corrigé) ==========
 pseudo.addEventListener("submit", function (evt) {
   evt.preventDefault();
   name = evt.target["name"].value;
 
   if (!name) return;
 
-  // 1. On crée la socket
+  // 1. Créer la socket
   socket = window.io();
 
-  // 2. On met tous les écouteurs AVANT d'envoyer le join
+  // 2. Mettre tous les écouteurs
   StartGame();
 
-  // 3. Ensuite seulement on rejoint
+  // 3. Ensuite seulement rejoindre
   socket.emit("user_join", name);
 });
 
-// ========== FIN DE LA CORRECTION ==========
-
-submission.addEventListener("submit", function (evt) {
-  evt.preventDefault();
-  const reponse = evt.target["reponse"].value;
-  if (reponse) {
-    socket.emit("user_message", pseudoJoueur, reponse);
-    socket.emit("send_response", name, reponse);
-    evt.target["reponse"].value = "";
-  }
-});
-
+// ========== MESSAGE PRIVÉ ==========
 submission_pm.addEventListener("submit", function (evt) {
   evt.preventDefault();
   const reponse = evt.target["reponse_pv"].value;
@@ -124,29 +118,6 @@ submission_pm.addEventListener("submit", function (evt) {
     evt.target["reponse_pv"].value = "";
   }
 });
-
-document.getElementById("mpChat").addEventListener(
-  "mouseenter",
-  function (event) {
-    document.getElementById("mpChat").style.cursor = "pointer";
-    event.target.style.color = "purple";
-    setTimeout(function () {
-      event.target.style.color = "";
-    }, 500);
-  },
-  false
-);
-
-document.getElementById("mpChat").addEventListener(
-  "mouseover",
-  function (event) {
-    event.target.style.color = "orange";
-    setTimeout(function () {
-      event.target.style.color = "";
-    }, 500);
-  },
-  false
-);
 
 document.getElementById("mpChat").addEventListener("click", function (e) {
   const collection = document.getElementById("mpChat").getElementsByTagName("li");
@@ -169,7 +140,6 @@ const departMinutes = 2;
 let temps = departMinutes * 60;
 
 function start() {
-  var self = this;
   this.interval = setInterval(() => {
     let minutes = parseInt(temps / 60, 10);
     let secondes = parseInt(temps % 60, 10);
@@ -199,22 +169,11 @@ function CheckTemps() {
   }
 }
 
-function refresh() {
-  temps = 10;
-  clearInterval(this.interval);
-  delete this.interval;
-  if (!this.interval) this.start();
-}
-
-function Play() {
-  if (!this.interval) this.start();
-}
-
 function counterStyle() {
   if (temps < 90) {
     timer.classList.remove("text-green-400");
     timer.classList.add("text-orange-400");
-  } else if (temps > 90) {
+  } else {
     timer.classList.remove("text-orange-400");
     timer.classList.add("text-green-400");
   }
@@ -252,28 +211,24 @@ async function AfficherRep(prenom, pseudo, imageRecu) {
 }
 
 function StartGame() {
-  // on supprime le champs de texte pseudo
   intro.classList.add("hidden");
-  // on affiche la salle d'attente
   attente.classList.remove("hidden");
 
-  // ===== TOUS LES ÉCOUTEURS ICI =====
+  // ===== TOUS LES ÉCOUTEURS =====
   socket.on("send_question", (questionnaire) => {
     const node1 = document.createElement("li");
     const node2 = document.createElement("li");
-    const textnode1 = document.createTextNode(questionnaire.question);
-    const textnode2 = document.createTextNode(questionnaire.numero);
-    node1.appendChild(textnode1);
+    node1.innerHTML = questionnaire.question;
     node1.style.fontSize = "x-large";
-    node1.style["margin"] = "auto";
+    node1.style.margin = "auto";
     node1.style.marginTop = "10px";
     node1.setAttribute("id", "titre2");
-    node1.innerHTML = questionnaire.question;
 
-    node2.appendChild(textnode2);
+    node2.innerHTML = questionnaire.numero;
     node2.style.fontSize = "small";
     node2.style.width = "max-content";
-    node2.style["margin"] = "auto";
+    node2.style.margin = "auto";
+
     document.getElementById("mychat").appendChild(node1);
     document.getElementById("mychat").appendChild(node2);
     $("#all_game").scrollTop($("#all_game")[0].scrollHeight);
@@ -285,7 +240,10 @@ function StartGame() {
     ${leaderboard
       .map(
         (player) =>
-          `<li class="flex justify-between items-center"> <img class="w-20 h-20" src="${player.image}"/><strong>${player.name}</strong> ${player.points}</li>`
+          `<li class="flex justify-between items-center">
+            <img class="w-20 h-20" src="${player.image}"/>
+            <strong>${player.name}</strong> ${player.points}
+          </li>`
       )
       .join("")}
     `;
@@ -295,106 +253,84 @@ function StartGame() {
     pseudoJoueur = data;
   });
 
-  socket.on("delete_chat", function (data) {
+  socket.on("delete_chat", function () {
     document.getElementById("mychat").innerHTML = "";
   });
 
-  socket.on("StartGame", function (data) {
+  socket.on("StartGame", function () {
     attente.classList.add("hidden");
     game.classList.remove("hidden");
   });
 
   socket.on("update_Attente", function (pseudoJoueursAttente) {
-    let playersNameRecu = [];
-    let playersImageRecu =
-      "https://cdn.glitch.global/d9fac2fb-dd5e-4283-800f-e504a6e4a40c/incconnu.png?v=1666717467513";
-    for (let i = 0; i < pseudoJoueursAttente.length; i++) {
-      playersNameRecu[i] = pseudoJoueursAttente[i];
-    }
     document.getElementById("salle_joueur").innerHTML = "";
-    playersNameRecu.sort();
-    for (let i = 0; i < playersNameRecu.length; i++) {
-      const node1 = document.createElement("li");
-      const textnode1 = document.createTextNode(playersNameRecu[i]);
-      var _img = document.createElement("img");
-      _img.src = playersImageRecu;
-      _img.style.width = "72px";
-      node1.appendChild(textnode1);
-      node1.style.fontSize = "x-large";
-      node1.style.width = "max-content";
-      node1.style["margin"] = "auto";
-      node1.style.marginTop = "5px";
-      document.getElementById("salle_joueur").appendChild(_img);
-      document.getElementById("salle_joueur").appendChild(node1);
+    const liste = [...pseudoJoueursAttente].sort();
+
+    liste.forEach((pseudo) => {
+      const node = document.createElement("li");
+      node.textContent = pseudo;
+      node.style.fontSize = "x-large";
+      node.style.margin = "auto";
+      node.style.marginTop = "5px";
+
+      const img = document.createElement("img");
+      img.src = "https://cdn.glitch.global/d9fac2fb-dd5e-4283-800f-e504a6e4a40c/incconnu.png?v=1666717467513";
+      img.style.width = "72px";
+
+      document.getElementById("salle_joueur").appendChild(img);
+      document.getElementById("salle_joueur").appendChild(node);
+    });
+  });
+
+  socket.on("AfficherReponsesJoueur", function (QuestionJoueur, reponseJoueur, nameRecu) {
+    if (name == nameRecu) {
+      document.getElementById("HistoriqueChat").innerHTML = "";
+      for (let i = 0; i < QuestionJoueur.length; i++) {
+        const node1 = document.createElement("li");
+        node1.textContent = (i + 1) + " - " + QuestionJoueur[i];
+        node1.style.color = "#1260CC";
+        node1.style.fontSize = "large";
+        node1.style.margin = "auto";
+        node1.style.marginTop = "5px";
+
+        const node2 = document.createElement("li");
+        node2.textContent = reponseJoueur[i] || "";
+        node2.style.color = "white";
+        node2.style.fontSize = "large";
+        node2.style.margin = "auto";
+        node2.style.marginTop = "5px";
+
+        document.getElementById("HistoriqueChat").appendChild(node1);
+        document.getElementById("HistoriqueChat").appendChild(node2);
+      }
+      document.getElementById("historique_joueur").classList.remove("hidden");
+      document.getElementById("outro_relier").classList.add("hidden");
     }
   });
 
-  socket.on(
-    "AfficherReponsesJoueur",
-    function (QuestionJoueur, reponseJoueur, nameRecu) {
-      if (name == nameRecu) {
-        document.getElementById("HistoriqueChat").innerHTML = "";
-        for (let i = 0; i < QuestionJoueur.length; i++) {
-          const node1 = document.createElement("li");
-          const textnode1 = document.createTextNode(
-            i + 1 + " - " + QuestionJoueur[i]
-          );
-          const node2 = document.createElement("li");
-          const textnode2 = document.createTextNode(reponseJoueur[i]);
-          node1.appendChild(textnode1);
-          node2.appendChild(textnode2);
-          node1.style.fontSize = "large";
-          node1.style.width = "max-content";
-          node1.style["margin"] = "auto";
-          node1.style.marginTop = "5px";
-          node1.style.color = "#1260CC";
-          node2.style.color = "white";
-          node2.style.fontSize = "large";
-          node2.style.width = "max-content";
-          node2.style["margin"] = "auto";
-          node2.style.marginTop = "5px";
-          document.getElementById("HistoriqueChat").appendChild(node1);
-          document.getElementById("HistoriqueChat").appendChild(node2);
-        }
-        document.getElementById("historique_joueur").classList.remove("hidden");
-        document.getElementById("outro_relier").classList.add("hidden");
-      }
-    }
-  );
-
-  socket.on(
-    "reponse_afficher_final_All",
-    function (prenom, pseudo, imagesJoueur) {
-      let prenomRecu = [];
-      let pseudoRecu = [];
-      let imageRecu = [];
-      for (let i = 0; i < prenom.length; i++) {
-        prenomRecu[i] = prenom[i];
-        pseudoRecu[i] = pseudo[i];
-        imageRecu[i] = imagesJoueur[i];
-      }
-      outro_relier.classList.add("hidden");
-      document.getElementById("historique_joueur").classList.add("hidden");
-      outro_finale.classList.remove("hidden");
-      AfficherRep(prenomRecu, pseudoRecu, imageRecu);
-    }
-  );
+  socket.on("reponse_afficher_final_All", function (prenom, pseudo, imagesJoueur) {
+    outro_relier.classList.add("hidden");
+    document.getElementById("historique_joueur").classList.add("hidden");
+    outro_finale.classList.remove("hidden");
+    AfficherRep(prenom, pseudo, imagesJoueur);
+  });
 
   socket.on("debutRelier", function (noms, pseudo) {
     start();
-    const players = [
+    const playersConfig = [
       { buttonId: "joueur_1", selectId: "pseudo-select", divId: "duo_un" },
       { buttonId: "joueur_2", selectId: "pseudo-select2", divId: "duo_deux" },
       { buttonId: "joueur_3", selectId: "pseudo-select3", divId: "duo_trois" },
       { buttonId: "joueur_4", selectId: "pseudo-select4", divId: "duo_quatre" },
       { buttonId: "joueur_5", selectId: "pseudo-select5", divId: "duo_cinq" },
     ];
-    for (let i = 0; i < players.length; i++) {
-      const player = players[i];
-      const playerDiv = document.getElementById(player.divId);
+
+    for (let i = 0; i < playersConfig.length; i++) {
+      const conf = playersConfig[i];
+      const div = document.getElementById(conf.divId);
       if (i < pseudo.length) {
-        playerDiv.style.display = "block";
-        const button = document.getElementById(player.buttonId);
+        div.style.display = "block";
+        const button = document.getElementById(conf.buttonId);
         button.value = pseudo[i];
         button.style.background = "#ffb6c1";
         button.style.borderRadius = "25px";
@@ -402,28 +338,28 @@ function StartGame() {
         button.style.paddingLeft = "5px";
         button.style.paddingRight = "5px";
       } else {
-        playerDiv.style.display = "none";
+        div.style.display = "none";
       }
     }
+
+    // Remplir les selects
     for (let i = 0; i < pseudo.length; i++) {
-      for (let j = 0; j < players.length; j++) {
-        const select = document.getElementById(players[j].selectId);
+      for (let j = 0; j < playersConfig.length; j++) {
+        const select = document.getElementById(playersConfig[j].selectId);
         const opt = document.createElement("option");
         opt.value = pseudo[i];
         opt.text = pseudo[i];
         select.appendChild(opt);
       }
     }
+
     game.classList.add("hidden");
     outro_relier.classList.remove("hidden");
   });
 
   socket.on("updateNotif", function (pseudoJoueurEnvoi, pseudoJoueurRecu) {
     if (pseudoJoueur == pseudoJoueurRecu) {
-      console.log("changement de couleur de : " + pseudoJoueurEnvoi);
-      const collection = document
-        .getElementById("mpChat")
-        .getElementsByTagName("li");
+      const collection = document.getElementById("mpChat").getElementsByTagName("li");
       for (let i = 0; i < collection.length; i++) {
         if (collection[i].innerHTML == pseudoJoueurEnvoi) {
           collection[i].style.color = "green";
@@ -437,94 +373,18 @@ function StartGame() {
       const node1 = document.createElement("li");
       const node2 = document.createElement("li");
       const node3 = document.createElement("li");
-      const textnode3 = document.createTextNode("Nouveau Message");
-      const textnode1 = document.createTextNode(PseudoEnvoi);
-      const textnode2 = document.createTextNode(Message);
-      node1.appendChild(textnode1);
+
+      node1.textContent = PseudoEnvoi;
       node1.style.marginTop = "15px";
       node1.style.color = "#ffb6c1";
-      node2.appendChild(textnode2);
+
+      node2.textContent = Message;
       node2.style.color = "black";
       node2.style.background = "#ffb6c1";
       node2.style.borderRadius = "25px";
       node2.style.width = "max-content";
       node2.style.paddingLeft = "5px";
       node2.style.paddingRight = "5px";
-      node2.style["font-size"] = "20px";
-      node3.setAttribute("id", "titre");
-      node3.style.paddingTop = "5px";
+      node2.style.fontSize = "20px";
+
       node3.innerHTML = "Nouveau Message";
-      if (PseudoEnvoi == pseudoJoueur) {
-        node2.style.background = "#1260CC";
-        node2.style.color = "white";
-        node2.style.marginTop = "10px";
-        node2.style["float"] = "right";
-      } else if (PseudoEnvoi != pseudoJoueur) {
-        if (pseudoQuiNousDM != PseudoEnvoi) {
-          document.getElementById("privateChat").appendChild(node3);
-        }
-        document.getElementById("privateChat").appendChild(node1);
-        playSound(
-          "https://cdn.glitch.global/d9fac2fb-dd5e-4283-800f-e504a6e4a40c/messageRecu.mp3?v=1666703414083"
-        );
-      }
-      document.getElementById("privateChat").appendChild(node2);
-      $("#pm_game").scrollTop($("#pm_game")[0].scrollHeight);
-      pseudoQuiNousDM = PseudoRecu;
-    }
-  });
-
-  socket.on("update_players", function (Datapseudo, Dataimage) {
-    document.getElementById("mpChat").innerHTML = "";
-    Datapseudo.sort();
-    Dataimage.sort();
-    for (let i = 0; i < Datapseudo.length; i++) {
-      if (Datapseudo[i] == pseudoJoueur) {
-        Datapseudo[i] = "Vous(" + Datapseudo[i] + ")";
-      }
-      const node1 = document.createElement("li");
-      const textnode1 = document.createTextNode(Datapseudo[i]);
-      var _img = document.createElement("img");
-      _img.src = Dataimage[i];
-      _img.style.width = "72px";
-      node1.appendChild(textnode1);
-      node1.style.fontSize = "x-large";
-      node1.style.width = "max-content";
-      node1.style["margin"] = "auto";
-      node1.style.marginTop = "5px";
-      document.getElementById("mpChat").appendChild(_img);
-      document.getElementById("mpChat").appendChild(node1);
-    }
-  });
-
-  socket.on("updateNewMessage", function (NamePlayer, Message) {
-    const node1 = document.createElement("li");
-    const node2 = document.createElement("li");
-    const textnode1 = document.createTextNode(NamePlayer);
-    const textnode2 = document.createTextNode(Message);
-    node1.appendChild(textnode1);
-    node1.style.marginTop = "10px";
-    node1.style.color = "#ffb6c1";
-    node2.appendChild(textnode2);
-    node2.style.color = "black";
-    node2.style.background = "#ffb6c1";
-    node2.style.borderRadius = "25px";
-    node2.style.width = "max-content";
-    node2.style.paddingLeft = "5px";
-    node2.style.paddingRight = "5px";
-    node2.style["font-size"] = "20px";
-    if (NamePlayer == pseudoJoueur) {
-      node2.style.background = "#1260CC";
-      node2.style.color = "white";
-      node2.style.marginTop = "10px";
-      node2.style["float"] = "right";
-    } else if (NamePlayer != pseudoJoueur) {
-      document.getElementById("mychat").appendChild(node1);
-      playSound(
-        "https://cdn.glitch.global/d9fac2fb-dd5e-4283-800f-e504a6e4a40c/messageEnvoi.mp3?v=1666703413833"
-      );
-    }
-    document.getElementById("mychat").appendChild(node2);
-    $("#all_game").scrollTop($("#all_game")[0].scrollHeight);
-  });
-}
