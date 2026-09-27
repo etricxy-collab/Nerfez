@@ -92,9 +92,37 @@ img_send.addEventListener("click", function (e) {
   }
 });
 
-// ========== CONNEXION (version plus robuste) ==========
+// ========== CONNEXION AVEC ALERTES ==========
 pseudo.addEventListener("submit", function (evt) {
   evt.preventDefault();
+
+  alert("1. Formulaire soumis");
+
+  const input = evt.target.querySelector("input");
+  alert("2. Input trouvé : " + (input ? "oui" : "non"));
+
+  name = input ? input.value.trim() : "";
+  alert("3. Pseudo récupéré : " + name);
+
+  if (!name) {
+    alert("Écris un pseudo !");
+    return;
+  }
+
+  if (typeof window.io === "undefined") {
+    alert("ERREUR : Socket.io n'est pas chargé !");
+    return;
+  }
+
+  alert("4. Création de la socket...");
+  socket = window.io();
+
+  alert("5. Appel de StartGame()");
+  StartGame();
+
+  alert("6. Envoi de user_join");
+  socket.emit("user_join", name);
+});
 
   // On récupère la valeur de façon plus sûre
   const input = evt.target.querySelector("input");
