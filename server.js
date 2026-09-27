@@ -6,7 +6,7 @@ const io = require("socket.io")(http);
 let players = [];
 let compteur_question = 0;
 
-// ===== FAUSSES IDENTITÉS (tu peux les changer) =====
+// ===== FAUSSES IDENTITÉS =====
 const FAKE_NAMES = ["Maurice", "Léo", "Adrien", "Jean-Paul", "Robert"];
 const FAKE_IMAGES = [
   "https://cdn.glitch.global/d9fac2fb-dd5e-4283-800f-e504a6e4a40c/MauricePhoto.png?v=1666706514454",
@@ -17,7 +17,7 @@ const FAKE_IMAGES = [
 ];
 
 ///////////////////////////////////////////
-// DEBUT DES QUESTIONS
+// QUESTIONS
 //////////////////////////////////////////
 let Questionnaire = [
   { question: "Comment allez vous ?", numero: "Question n°1/30" },
@@ -52,9 +52,6 @@ let Questionnaire = [
   { question: "Quel est votre don maximum au Zevent ?", numero: "Question n°30/30" },
   { question: "C'est fini ! Préparez-vous à relier les fausses identités aux vraies !", numero: "Demutez vous" },
 ];
-///////////////////////////////////////////
-// FIN DES QUESTIONS
-//////////////////////////////////////////
 
 app.use(express.static(__dirname + "/public"));
 
@@ -64,17 +61,14 @@ app.get("/", (request, response) => {
 
 io.on("connection", function (socket) {
 
-  // ========== CONNEXION D'UN JOUEUR ==========
+  // ========== CONNEXION ==========
   socket.on("user_join", (name) => {
-    // Pseudo vide ou déjà pris
     if (!name || players.some(p => p.name === name)) {
       socket.emit("erreur", "Pseudo déjà pris ou invalide");
       return;
     }
 
-    // Trouver une fausse identité encore libre
     const available = FAKE_NAMES.filter(fake => !players.some(p => p.pseudo === fake));
-
     if (available.length === 0) {
       socket.emit("erreur", "Plus de places disponibles (max 5 joueurs)");
       return;
@@ -94,19 +88,29 @@ io.on("connection", function (socket) {
     players.push(player);
     console.log(name + " vient de se connecter → " + prenomJoueur);
 
-    // On envoie sa fausse identité seulement à lui
     socket.emit("pseudo_joueur", prenomJoueur);
-
-    // On met à jour la salle d'attente pour TOUT LE MONDE
     AttenteUpdate();
   });
 
-  // ========== RÉPONSE À UNE QUESTION ==========
-  socket.on("send_response", function (name, reponse) {
-    if (reponse != "ChronoStart123") {
-      increaseReponse(name, reponse);
-      CheckReponse();
+  // ========== RÉPONSE À UNE QUESTION (corrigé) ==========
+  socket.on("send_response", function (reponse) {
+    if (reponse === "ChronoStart123") return;
+
+    const player = players.find(p => p.id === socket.id);
+    if (!player) {
+      console.log("Joueur introuvable");
+      return;
     }
+
+    if (player.hasOwnProperty("reponse" + compteur_question)) {
+      console.log(player.name + " a déjà répondu → ignoré");
+      return;
+    }
+
+    player["reponse" + compteur_question] = reponse;
+    console.log(player.name + " a répondu à la question " + (compteur_question + 1));
+
+    CheckReponse();
   });
 
   // ========== MESSAGE PRIVÉ ==========
@@ -117,15 +121,15 @@ io.on("connection", function (socket) {
 
   // ========== VOIR LES RÉPONSES D'UN JOUEUR ==========
   socket.on("voirReponsesJoueur", function (data, name) {
-    let reponseJoueur = [];
-    let QuestionJoueur = [];
     let j = 0;
-
     if (data == "joueur1") j = 0;
     if (data == "joueur2") j = 1;
     if (data == "joueur3") j = 2;
     if (data == "joueur4") j = 3;
     if (data == "joueur5") j = 4;
+
+    let QuestionJoueur = [];
+    let reponseJoueur = [];
 
     for (let i = 0; i < 30; i++) {
       QuestionJoueur[i] = Questionnaire[i].question;
@@ -180,7 +184,7 @@ io.on("connection", function (socket) {
     io.emit("AfficherPoints", leaderboard);
   });
 
-  // ========== RÉPONSES DE LA PHASE RELIER ==========
+  // ========== RÉPONSES PHASE RELIER ==========
   socket.on("reponse_relier", function (name, reponses) {
     for (let i = 0; i < players.length; i++) {
       if (players[i].name == name) {
@@ -208,6 +212,19 @@ function AttenteUpdate() {
   const liste = players.map(p => p.name);
   io.emit("update_Attente", liste);
   console.log("Salle d'attente :", liste);
+}
+
+function CheckReponse() {
+  if (players.length === 0) return;
+
+  const ontRepondu = players.filter(p => p.hasOwnProperty("reponse" + compteur_question));
+  console.log(`Réponses reçues : ${ontRepondu.length} / ${players.length}`);
+
+  if (ontRepondu.length === players.length) {
+    console.log("Tout le monde a répondu → question suivante");
+    compteur_question += 1;
+    updateGame();
+  }
 }
 
 function CheckReponsePoints(id) {
@@ -249,7 +266,6 @@ function updateGame() {
 
   const pseudoJoueurs = players.map(p => p.pseudo);
   const imageJoueurs = players.map(p => p.image);
-
   io.emit("update_players", pseudoJoueurs, imageJoueurs);
 }
 
@@ -259,18 +275,6 @@ function DebutRelier() {
   io.emit("debutRelier", noms, pseudo);
 }
 
-function CheckReponse() {
-  const boolean = players.map(p => p.hasOwnProperty("reponse" + compteur_question));
-  const tousOntRepondu = boolean.every(v => v === true);
-
-  if (tousOntRepondu && players.length > 0) {
-    compteur_question += 1;
-    updateGame();
-  }
-}
-
-function increaseReponse(name, reponse) {
-  for (let i = 0; i < players.length; i++) {
-    if (players[i].name === name) {
-      // Bloque si déjà répondu
-      if 
+http.listen(process.env.PORT || 3000, function () {
+  console.log("Serveur démarré sur le port " + (process.env.PORT || 3000));
+});
