@@ -92,20 +92,26 @@ img_send.addEventListener("click", function (e) {
   }
 });
 
-// ========== CONNEXION (ordre corrigé) ==========
+// ========== CONNEXION (version plus robuste) ==========
 pseudo.addEventListener("submit", function (evt) {
   evt.preventDefault();
-  name = evt.target["name"].value;
 
-  if (!name) return;
+  // On récupère la valeur de façon plus sûre
+  const input = evt.target.querySelector("input");
+  name = input ? input.value.trim() : "";
+
+  if (!name) {
+    alert("Écris un pseudo !");
+    return;
+  }
 
   // 1. Créer la socket
   socket = window.io();
 
-  // 2. Mettre tous les écouteurs
+  // 2. Mettre tous les écouteurs + afficher la salle d'attente
   StartGame();
 
-  // 3. Ensuite seulement rejoindre
+  // 3. Rejoindre
   socket.emit("user_join", name);
 });
 
