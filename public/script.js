@@ -16,7 +16,8 @@ const joueur_2 = document.getElementById("joueur_2");
 const joueur_3 = document.getElementById("joueur_3");
 const joueur_4 = document.getElementById("joueur_4");
 const joueur_5 = document.getElementById("joueur_5");
-//TIMER
+
+// TIMER
 const timer = document.getElementById("timer");
 let socket = undefined;
 let name = "anonyme";
@@ -39,38 +40,30 @@ document.getElementById("lancer_jeu").addEventListener("click", function (e) {
 joueur_1.addEventListener("click", function (e) {
   socket.emit("voirReponsesJoueur", "joueur1", name);
 });
-
 joueur_2.addEventListener("click", function (e) {
   socket.emit("voirReponsesJoueur", "joueur2", name);
 });
-
 joueur_3.addEventListener("click", function (e) {
   socket.emit("voirReponsesJoueur", "joueur3", name);
 });
-
 joueur_4.addEventListener("click", function (e) {
   socket.emit("voirReponsesJoueur", "joueur4", name);
 });
-
 joueur_5.addEventListener("click", function (e) {
   socket.emit("voirReponsesJoueur", "joueur5", name);
 });
 
 img_retour.addEventListener("click", function (e) {
-  //on supprime les dm du mec e.target.innerText
   private_message.classList.add("hidden");
-  //on affiche le chat general
   game.classList.remove("hidden");
 });
 
 document.getElementById("img_retour2").addEventListener("click", function (e) {
-  //on supprime lhistorique
   document.getElementById("historique_joueur").classList.add("hidden");
   document.getElementById("outro_relier").classList.remove("hidden");
 });
 
 reponse_finale.addEventListener("click", function (e) {
-  //on supprime les dm du mec e.target.innerText
   reponse_finale.classList.add("hidden");
   let reponses = [];
   reponses[0] = document.getElementById("pseudo-select").value;
@@ -86,9 +79,7 @@ reponse_finale.addEventListener("click", function (e) {
 
 img_send.addEventListener("click", function (e) {
   e.preventDefault();
-
   const reponse = document.getElementById("reponse").value;
-
   if (reponse) {
     socket.emit("user_message", pseudoJoueur, reponse);
     socket.emit("send_response", name, reponse);
@@ -96,26 +87,28 @@ img_send.addEventListener("click", function (e) {
   }
 });
 
+// ========== CORRECTION ICI ==========
 pseudo.addEventListener("submit", function (evt) {
   evt.preventDefault();
   name = evt.target["name"].value;
 
-  //si le pseudo n'est pas vide
-  if (name) {
-    //On se connecte à la socket
-    socket = window.io();
+  if (!name) return;
 
-    //on indique le pseudo du joueur qui vient de se connecter
-    socket.emit("user_join", name);
-  }
+  // 1. On crée la socket
+  socket = window.io();
+
+  // 2. On met tous les écouteurs AVANT d'envoyer le join
   StartGame();
+
+  // 3. Ensuite seulement on rejoint
+  socket.emit("user_join", name);
 });
+
+// ========== FIN DE LA CORRECTION ==========
 
 submission.addEventListener("submit", function (evt) {
   evt.preventDefault();
-
   const reponse = evt.target["reponse"].value;
-
   if (reponse) {
     socket.emit("user_message", pseudoJoueur, reponse);
     socket.emit("send_response", name, reponse);
@@ -126,7 +119,6 @@ submission.addEventListener("submit", function (evt) {
 submission_pm.addEventListener("submit", function (evt) {
   evt.preventDefault();
   const reponse = evt.target["reponse_pv"].value;
-
   if (reponse) {
     socket.emit("messagePrivate", pseudoJoueur, pseudoJoueurRecu, reponse);
     evt.target["reponse_pv"].value = "";
@@ -137,10 +129,7 @@ document.getElementById("mpChat").addEventListener(
   "mouseenter",
   function (event) {
     document.getElementById("mpChat").style.cursor = "pointer";
-    // on met l'accent sur la cible de mouseenter
     event.target.style.color = "purple";
-
-    // on réinitialise la couleur après quelques instants
     setTimeout(function () {
       event.target.style.color = "";
     }, 500);
@@ -148,15 +137,10 @@ document.getElementById("mpChat").addEventListener(
   false
 );
 
-// Ce gestionnaire sera exécuté à chaque fois que le curseur
-// se déplacera sur un autre élément de la liste
 document.getElementById("mpChat").addEventListener(
   "mouseover",
   function (event) {
-    // on met l'accent sur la cible de mouseover
     event.target.style.color = "orange";
-
-    // on réinitialise la couleur après quelques instants
     setTimeout(function () {
       event.target.style.color = "";
     }, 500);
@@ -165,9 +149,7 @@ document.getElementById("mpChat").addEventListener(
 );
 
 document.getElementById("mpChat").addEventListener("click", function (e) {
-  const collection = document
-    .getElementById("mpChat")
-    .getElementsByTagName("li");
+  const collection = document.getElementById("mpChat").getElementsByTagName("li");
   for (let i = 0; i < collection.length; i++) {
     collection[i].style.color = "white";
   }
@@ -176,20 +158,16 @@ document.getElementById("mpChat").addEventListener("click", function (e) {
     e.target.matches("li") &&
     e.target.innerText != "Vous(" + pseudoJoueur + ")"
   ) {
-    //on supprime le chat general
     game.classList.add("hidden");
-    //on affiche les dm du mec e.target.innerText
     pseudoJoueurRecu = e.target.innerText;
     private_message.classList.remove("hidden");
   }
 });
 
-//timer en secondes
+// TIMER
 const departMinutes = 2;
 let temps = departMinutes * 60;
-//departMinutes * 60
 
-//lancement timer
 function start() {
   var self = this;
   this.interval = setInterval(() => {
@@ -204,7 +182,6 @@ function start() {
   }, 1000);
 }
 
-//si le temps tombe a zero on donne la reponse et on passe a une image suivante
 function CheckTemps() {
   if (temps == 0) {
     if (envoi_boolean == false) {
@@ -233,7 +210,6 @@ function Play() {
   if (!this.interval) this.start();
 }
 
-//changement de couleur du timer
 function counterStyle() {
   if (temps < 90) {
     timer.classList.remove("text-green-400");
@@ -261,8 +237,7 @@ async function AfficherRep(prenom, pseudo, imageRecu) {
     for (let i = 0; i < 5; i++) {
       document.getElementById("img_final").style.width = "72px";
       document.getElementById("img_final").src = imageRecu[j];
-      document.getElementById("vrai_pseudo").innerHTML =
-        pseudo[j] + " était ...";
+      document.getElementById("vrai_pseudo").innerHTML = pseudo[j] + " était ...";
       document.getElementById("vrai_prenom").innerHTML = prenom[j];
       if (i == 3) {
         document.getElementById("vrai_prenom").classList.remove("hidden");
@@ -277,17 +252,17 @@ async function AfficherRep(prenom, pseudo, imageRecu) {
 }
 
 function StartGame() {
-  //on supprime le champs de texte pseudo
+  // on supprime le champs de texte pseudo
   intro.classList.add("hidden");
-  //on affiche les questions
+  // on affiche la salle d'attente
   attente.classList.remove("hidden");
 
+  // ===== TOUS LES ÉCOUTEURS ICI =====
   socket.on("send_question", (questionnaire) => {
     const node1 = document.createElement("li");
     const node2 = document.createElement("li");
     const textnode1 = document.createTextNode(questionnaire.question);
     const textnode2 = document.createTextNode(questionnaire.numero);
-
     node1.appendChild(textnode1);
     node1.style.fontSize = "x-large";
     node1.style["margin"] = "auto";
@@ -295,7 +270,6 @@ function StartGame() {
     node1.setAttribute("id", "titre2");
     node1.innerHTML = questionnaire.question;
 
-    //////////////////////
     node2.appendChild(textnode2);
     node2.style.fontSize = "small";
     node2.style.width = "max-content";
@@ -373,8 +347,8 @@ function StartGame() {
           node1.style.width = "max-content";
           node1.style["margin"] = "auto";
           node1.style.marginTop = "5px";
-          node1.style.color = "	#1260CC";
-          node2.style.color = "	white";
+          node1.style.color = "#1260CC";
+          node2.style.color = "white";
           node2.style.fontSize = "large";
           node2.style.width = "max-content";
           node2.style["margin"] = "auto";
@@ -415,13 +389,10 @@ function StartGame() {
       { buttonId: "joueur_4", selectId: "pseudo-select4", divId: "duo_quatre" },
       { buttonId: "joueur_5", selectId: "pseudo-select5", divId: "duo_cinq" },
     ];
-
     for (let i = 0; i < players.length; i++) {
       const player = players[i];
       const playerDiv = document.getElementById(player.divId);
-
       if (i < pseudo.length) {
-        // Afficher le joueur et son sélecteur
         playerDiv.style.display = "block";
         const button = document.getElementById(player.buttonId);
         button.value = pseudo[i];
@@ -431,12 +402,9 @@ function StartGame() {
         button.style.paddingLeft = "5px";
         button.style.paddingRight = "5px";
       } else {
-        // Masquer le joueur et son sélecteur s'il n'est pas présent
         playerDiv.style.display = "none";
       }
     }
-
-    // Alimenter chaque select avec les joueurs disponibles
     for (let i = 0; i < pseudo.length; i++) {
       for (let j = 0; j < players.length; j++) {
         const select = document.getElementById(players[j].selectId);
@@ -446,10 +414,7 @@ function StartGame() {
         select.appendChild(opt);
       }
     }
-
-    // Masquer le jeu
     game.classList.add("hidden");
-    // Afficher le jeu de fin (relier)
     outro_relier.classList.remove("hidden");
   });
 
@@ -477,10 +442,10 @@ function StartGame() {
       const textnode2 = document.createTextNode(Message);
       node1.appendChild(textnode1);
       node1.style.marginTop = "15px";
-      node1.style.color = "	#ffb6c1";
+      node1.style.color = "#ffb6c1";
       node2.appendChild(textnode2);
       node2.style.color = "black";
-      node2.style.background = "	#ffb6c1";
+      node2.style.background = "#ffb6c1";
       node2.style.borderRadius = "25px";
       node2.style.width = "max-content";
       node2.style.paddingLeft = "5px";
@@ -490,11 +455,10 @@ function StartGame() {
       node3.style.paddingTop = "5px";
       node3.innerHTML = "Nouveau Message";
       if (PseudoEnvoi == pseudoJoueur) {
-        node2.style.background = "	#1260CC";
+        node2.style.background = "#1260CC";
         node2.style.color = "white";
         node2.style.marginTop = "10px";
         node2.style["float"] = "right";
-        //si c'est pas nous
       } else if (PseudoEnvoi != pseudoJoueur) {
         if (pseudoQuiNousDM != PseudoEnvoi) {
           document.getElementById("privateChat").appendChild(node3);
@@ -540,17 +504,17 @@ function StartGame() {
     const textnode2 = document.createTextNode(Message);
     node1.appendChild(textnode1);
     node1.style.marginTop = "10px";
-    node1.style.color = "	#ffb6c1";
+    node1.style.color = "#ffb6c1";
     node2.appendChild(textnode2);
     node2.style.color = "black";
-    node2.style.background = "	#ffb6c1";
+    node2.style.background = "#ffb6c1";
     node2.style.borderRadius = "25px";
     node2.style.width = "max-content";
     node2.style.paddingLeft = "5px";
     node2.style.paddingRight = "5px";
     node2.style["font-size"] = "20px";
     if (NamePlayer == pseudoJoueur) {
-      node2.style.background = "	#1260CC";
+      node2.style.background = "#1260CC";
       node2.style.color = "white";
       node2.style.marginTop = "10px";
       node2.style["float"] = "right";
